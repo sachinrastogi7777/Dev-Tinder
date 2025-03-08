@@ -1,0 +1,16 @@
+{
+  "name": "dev-tinder",
+  "version": "1.0.0",
+  "description": "This is a connecting application for developers.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js"
+  },
+  "author": "Sachin Rastogi",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2",
+    "nodemon": "^3.1.9"
+  }
+}
