@@ -5,6 +5,7 @@ const app = express();
 
 app.use(express.json());
 
+// User Signup API.
 app.post("/signup", async (req, res) => {
     try {
         const user = new User(req.body);
@@ -16,6 +17,7 @@ app.post("/signup", async (req, res) => {
     }
 })
 
+// Get user by email.
 app.get("/user", async (req, res) => {
     const userEmail = req.body.email;
     try {
@@ -32,6 +34,7 @@ app.get("/user", async (req, res) => {
     }
 });
 
+// Get all the users.
 app.get("/feed", async (req, res) => {
     try {
         const users = await User.find({});
@@ -46,6 +49,30 @@ app.get("/feed", async (req, res) => {
         res.status(500).send("Error finding user: " + error.message);
     }
 });
+
+// Delete user by Id.
+app.delete("/user", async (req, res) => {
+    const userId = req.body.userId;
+    try {
+        await User.findByIdAndDelete(userId);
+        res.send("User deleted Successfully...");
+    } catch (error) {
+        console.log("Error deleting user:", error);
+        res.status(500).send("Error deleting user: " + error.message);
+    }
+});
+
+// Update user.
+app.patch("/user", async (req, res) => {
+    const userEmail = req.body.email;
+    try {
+        await User.findOneAndUpdate({email: userEmail}, {firstName: "King", lastName: "Kohli"});
+        res.send("User updated successfully...")
+    } catch (error) {
+        console.log("Error updating user:", error);
+        res.status(500).send("Error updating user: " + error.message);
+    }
+})
 
 connectDb().then(() => {
     console.log("Database connected successfully...");
