@@ -3,32 +3,40 @@ const mongoose = require('mongoose');
 const userSchema = new mongoose.Schema({
     firstName: {
         type: String,
-        required: true
+        required: true,
+        minLength: 2,
+        maxLength: 15
     },
     lastName: {
-        type: String
+        type: String,
+        required: true,
+        minLength: 2,
+        maxLength: 15
     },
     email: {
         type: String,
         required: true,
+        unique: true,
     },
     password: {
         type: String,
-        required: true
+        required: true,
+        minLength: 8,
     },
     dateOfBirth: {
-        type: Date
-    },
-    age: {
-        type: Number
+        type: Date,
     },
     gender: {
-        type: String
+        type: String,
     },
     mobileNumber: {
-        type: Number
+        type: Number,
+        unique: true
+    },
+    skills: {
+        type: Array,
     }
-});
+}, { timestamps: true });
 
 const User = mongoose.model("User", userSchema);
 
