@@ -3,6 +3,7 @@ const connectDb = require("./config/database");
 const User = require("./models/user");
 const { ageValidation, passwordValidation, validateSignupData } = require("./utils/validation");
 const bcrypt = require('bcrypt');
+const validator = require('validator');
 const app = express();
 
 app.use(express.json());
@@ -44,12 +45,15 @@ app.post("/signup", async (req, res) => {
 app.get("/login", (async (req, res) => {
     const { email, password } = req.body;
     try {
+        if (!validator.isEmail(email)) {
+            throw new Error("Please enter valid email.");
+        }
         const user = await User.findOne({ email });
         if (!user) {
             throw new Error("User not found.");
         }
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
             throw new Error("Please enter correct password.");
         }
         res.send("Login successful.");
