@@ -1,158 +1,17 @@
 const express = require("express");
-const connectDb = require("./config/database");
-const User = require("./models/user");
-const { ageValidation, passwordValidation, validateSignupData } = require("./utils/validation");
-const bcrypt = require('bcrypt');
-const validator = require('validator');
-const app = express();
-const JWT = require('jsonwebtoken');
+const connectDb = require("./src/config/database");
 const cookieParser = require('cookie-parser');
-const userAuth = require("./middleware/auth");
+const authRouter = require('./src/router/auth');
+const profileRouter = require('./src/router/profile');
+const requestRouter = require('./src/router/request');
+const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
 
-// User Signup API.
-app.post("/signup", async (req, res) => {
-    try {
-        validateSignupData(req.body);
-        if (req.body.email) {
-            const existingUser = await User.findOne({ email: req.body.email });
-            if (existingUser) {
-                throw new Error("Email already in use.");
-            }
-        }
-        if (req.body.mobileNumber) {
-            const existingUser = await User.findOne({ mobileNumber: req.body.mobileNumber });
-            if (existingUser) {
-                throw new Error("Mobile number already in use.");
-            }
-        }
-        const hashedPassword = await bcrypt.hash(req.body.password, 10);
-        const user = new User({
-            firstName: req.body.firstName,
-            lastName: req.body.lastName,
-            email: req.body.email,
-            password: hashedPassword,
-            dateOfBirth: req.body.dateOfBirth,
-            gender: req.body.gender,
-            mobileNumber: req.body.mobileNumber,
-            skills: req.body.skills,
-        });
-        await user.save();
-        res.send("User saved successfully...")
-    } catch (error) {
-        res.status(500).send("ERROR : " + error.message);
-    }
-})
-
-app.get("/login", (async (req, res) => {
-    const { email, password } = req.body;
-    try {
-        if (!validator.isEmail(email)) {
-            throw new Error("Please enter valid email.");
-        }
-        const user = await User.findOne({ email });
-        if (!user) {
-            throw new Error("User not found.");
-        }
-        const isPasswordValid = await user.validatePassword(password);
-        if (!isPasswordValid) {
-            throw new Error("Please enter correct password.");
-        }
-        const token = await user.getJWT();
-        res.cookie("token", token, { expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) });
-        res.send("Login successful.");
-    } catch (error) {
-        res.status(500).send("ERROR : " + error.message);
-    }
-}));
-
-app.get('/profile', userAuth, async (req, res) => {
-    try {
-        const user = req.user;
-        res.send(user);
-    } catch (error) {
-        res.status(500).send("ERROR : " + error.message);
-    }
-})
-
-app.post("/connectionRequest", userAuth, async (req, res) => {
-    try {
-        const user = req.user;
-        res.send("Connection request sent by " + user.firstName + " " + user.lastName);
-    } catch (error) {
-        res.status(500).send("ERROR : " + error.message);
-    }
-})
-
-// Get user by email.
-app.get("/user", async (req, res) => {
-    const userEmail = req.body.email;
-    try {
-        const user = await User.find({ email: userEmail });
-        if (user.length === 0) {
-            res.status(404).send("User not found!!!");
-        }
-        else {
-            res.send(user)
-        }
-    } catch (error) {
-        res.status(500).send("ERROR : " + error.message);
-    }
-});
-
-// Get all the users.
-app.get("/feed", async (req, res) => {
-    try {
-        const users = await User.find({});
-        if (!users) {
-            res.status(404).send("Users not found!!!");
-        }
-        else {
-            res.send(users);
-        }
-    } catch (error) {
-        res.status(500).send("ERROR : " + error.message);
-    }
-});
-
-// Delete user by Id.
-app.delete("/user", async (req, res) => {
-    const userId = req.body.userId;
-    try {
-        await User.findByIdAndDelete(userId);
-        res.send("User deleted Successfully...");
-    } catch (error) {
-        res.status(500).send("ERROR : " + error.message);
-    }
-});
-
-// Update user.
-app.patch("/user/:userId", async (req, res) => {
-    const userId = req.params.userId;
-    const body = req.body;
-    try {
-        const ALLOWED_UPDATES = ["firstName", "lastName", "password", "dateOfBirth", "gender", "mobileNumber", "skills"];
-        const isValidUpdate = Object.keys(body).every((update) => ALLOWED_UPDATES.includes(update));
-        if (!isValidUpdate) {
-            throw new Error("Invalid fields updates!!!");
-        };
-        if (body.dateOfBirth) {
-            const age = ageValidation(body.dateOfBirth);
-            if (age < 13) {
-                throw new Error("User must be at least 13 years old.");
-            }
-        };
-        if (body.skills?.length > 10) {
-            throw new Error("Skills can't be more than 10");
-        };
-        await User.findOneAndUpdate({ _id: userId }, body, { runValidators: true });
-        res.send("User updated successfully...")
-    } catch (error) {
-        res.status(500).send("ERROR : " + error.message);
-    }
-})
+app.use('/', authRouter);
+app.use('/', profileRouter);
+app.use('/', requestRouter);
 
 connectDb().then(() => {
     console.log("Database connected successfully...");
