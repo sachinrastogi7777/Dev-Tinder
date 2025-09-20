@@ -5,8 +5,12 @@ const { ageValidation, passwordValidation, validateSignupData } = require("./uti
 const bcrypt = require('bcrypt');
 const validator = require('validator');
 const app = express();
+const JWT = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
+const userAuth = require("./middleware/auth");
 
 app.use(express.json());
+app.use(cookieParser());
 
 // User Signup API.
 app.post("/signup", async (req, res) => {
@@ -52,15 +56,35 @@ app.get("/login", (async (req, res) => {
         if (!user) {
             throw new Error("User not found.");
         }
-        const isPasswordValid = await bcrypt.compare(password, user.password);
+        const isPasswordValid = await user.validatePassword(password);
         if (!isPasswordValid) {
             throw new Error("Please enter correct password.");
         }
+        const token = await user.getJWT();
+        res.cookie("token", token, { expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) });
         res.send("Login successful.");
     } catch (error) {
         res.status(500).send("ERROR : " + error.message);
     }
 }));
+
+app.get('/profile', userAuth, async (req, res) => {
+    try {
+        const user = req.user;
+        res.send(user);
+    } catch (error) {
+        res.status(500).send("ERROR : " + error.message);
+    }
+})
+
+app.post("/connectionRequest", userAuth, async (req, res) => {
+    try {
+        const user = req.user;
+        res.send("Connection request sent by " + user.firstName + " " + user.lastName);
+    } catch (error) {
+        res.status(500).send("ERROR : " + error.message);
+    }
+})
 
 // Get user by email.
 app.get("/user", async (req, res) => {
